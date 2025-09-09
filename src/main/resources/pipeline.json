@@ -1,0 +1,129 @@
+{
+  "jobId": 1,
+  "jobName": "",
+  "jobType": "",
+  "sparkConfiguration": {
+
+  },
+  "sources": [
+    {
+      "path": "/data/input/",
+      "format": "csv",
+      "options": {
+        "header": "true",
+        "inferSchema": "true"
+      }
+    }
+  ],
+  "target": [
+    {
+      "location": "s3://bucket/iceberg/tables/",
+      "table_name": "sales_data",
+      "format": "iceberg"
+    }
+  ],
+  "transformations": [
+    {
+      "operation": "select",
+      "columns": ["id", "name", "amount"]
+    },
+    {
+      "operation": "filter",
+      "condition": "amount > 100"
+    },
+    {
+      "operation": "withColumn",
+      "column_name": "tax",
+      "expression": "amount * 0.1"
+    },
+    {
+      "operation": "withColumnRenamed",
+      "old_name": "name",
+      "new_name": "customer_name"
+    },
+    {
+      "operation": "drop",
+      "columns": ["temporary_field"]
+    },
+    {
+      "operation": "distinct"
+    },
+    {
+      "operation": "limit",
+      "count": 100
+    },
+    {
+      "operation": "orderBy",
+      "columns": [
+        {"column": "amount", "order": "desc"},
+        {"column": "id", "order": "asc"}
+      ]
+    },
+    {
+      "operation": "groupBy",
+      "columns": ["region"],
+      "aggregations": [
+        {"agg_function": "sum", "column": "amount", "alias": "total_amount"},
+        {"agg_function": "avg", "column": "amount", "alias": "average_amount"}
+      ]
+    },
+    {
+      "operation": "join",
+      "right_dataset": "customer_info",
+      "join_type": "inner",
+      "join_condition": "left.customer_id = right.id"
+    },
+    {
+      "operation": "repartition",
+      "num_partitions": 10,
+      "columns": ["region"]
+    },
+    {
+      "operation": "cache"
+    },
+    {
+      "operation": "checkpoint"
+    },
+    {
+      "operation": "window",
+      "partition_by": ["region"],
+      "order_by": ["date"],
+      "window_name": "sales_window",
+      "functions": [
+        {
+          "function": "row_number",
+          "alias": "row_num"
+        },
+        {
+          "function": "sum",
+          "column": "amount",
+          "alias": "cumulative_amount"
+        }
+      ]
+    },
+    {
+      "operation": "pivot",
+      "column": "product_category",
+      "values": ["electronics", "clothing"],
+      "aggregation": {
+        "agg_function": "sum",
+        "column": "amount",
+        "alias": "total_amount"
+      }
+    },
+    {
+      "operation": "explode",
+      "column": "items",
+      "alias": "item"
+    },
+    {
+      "operation": "write",
+      "format": "parquet",
+      "mode": "append",
+      "path": "s3a://bucket/output/",
+      "options": {
+        "compression": "snappy"
+      }
+    }
+  ]
+}
