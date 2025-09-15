@@ -1,0 +1,79 @@
+{
+  "jobId": 2,
+  "jobName": "covid-data-processing-us-states",
+  "jobType": "etl-aggregation",
+  "sparkConfiguration": {
+    "spark.sql.shuffle.partitions": "10"
+  },
+  "sources": [
+    {
+      "path": "/Users/<USER>/Downloads/spark_etl/inputs/01-01-2022.csv",
+      "format": "csv",
+      "options": {
+        "header": "true",
+        "inferSchema": "true"
+      }
+    }
+  ],
+  "target": [  ],
+  "transformations": [
+    {
+      "operation": "filter",
+      "condition": "Country_Region == 'US'"
+    },
+    {
+      "operation": "drop",
+      "columns": [
+        "Lat",
+        "Long_",
+        "Last_Update",
+        "FIPS",
+        "Incident_Rate",
+        "Total_Test_Results",
+        "People_Hospitalized",
+        "Case_Fatality_Ratio",
+        "UID",
+        "ISO3",
+        "Testing_Rate",
+        "Hospitalization_Rate",
+        "Date",
+        "People_Tested",
+        "Mortality_Rate",
+        "Recovered",
+        "Active"
+      ]
+    },
+    {
+      "operation": "groupBy",
+      "columns": [
+        "Province_State"
+      ],
+      "aggregations": [
+        {
+          "agg_function": "sum",
+          "column": "Confirmed",
+          "alias": "Total_Confirmed"
+        },
+        {
+          "agg_function": "sum",
+          "column": "Deaths",
+          "alias": "Total_Deaths"
+        }
+      ]
+    },
+    {
+      "operation": "withColumn",
+      "column_name": "Case_Fatality_Ratio_Agg",
+      "expression": "Total_Deaths / Total_Confirmed"
+    },
+    {
+      "operation": "orderBy",
+      "columns": [
+        {
+          "column": "Total_Confirmed",
+          "order": "desc"
+        }
+      ]
+    }
+  ]
+}
